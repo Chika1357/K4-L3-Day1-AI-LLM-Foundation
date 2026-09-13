@@ -49,29 +49,10 @@ def call_openai(
     top_p: float = 0.9,
     max_tokens: int = 256,
 ) -> tuple[str, float]:
-    """
-    Gọi OpenAI Chat Completions API, trả về nội dung phản hồi + độ trễ.
-
-    Args:
-        prompt:      Tin nhắn của người dùng.
-        model:       Model OpenAI sử dụng (mặc định: gpt-4o).
-        temperature: Độ ngẫu nhiên khi lấy mẫu (0.0 – 2.0).
-        top_p:       Ngưỡng nucleus sampling.
-        max_tokens:  Số token tối đa được sinh ra.
-
-    Returns:
-        Tuple (response_text: str, latency_seconds: float).
-
-    Gợi ý:
-        from openai import OpenAI            # import BÊN TRONG hàm
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        # đo thời gian bằng time.perf_counter() trước và sau lời gọi API
-        # (perf_counter là đồng hồ đo khoảng thời gian, độ phân giải cao trên
-        #  mọi hệ điều hành; time.time() trên Windows có thể trả về 0.0)
-    """
     from openai import OpenAI
+ 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    start_time = time.perf_counter()
+    start = time.perf_counter()
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
@@ -79,10 +60,8 @@ def call_openai(
         top_p=top_p,
         max_tokens=max_tokens,
     )
-    latency = time.perf_counter() - start_time
-    response_text = response.choices[0].message.content or ""
-    return response_text, latency
-
+    latency = time.perf_counter() - start
+    return response.choices[0].message.content, latency
 
 # ---------------------------------------------------------------------------
 # Task 1.2 — Gọi GPT-4o-mini
@@ -347,9 +326,9 @@ def retry_with_backoff(
     while True:
         try:
             return fn()
-        except Exception as e:
+        except Exception:
             if attempt >= max_retries:
-                raise e
+                raise
             delay = base_delay * (2 ** attempt)
             time.sleep(delay)
             attempt += 1
